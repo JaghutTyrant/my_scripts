@@ -1,17 +1,40 @@
 #!/usr/bin/env bash
 
 set -e
-. "${HOME}/bin/ilsutils.sh"
+
+source "${HOME}/bin/ilsutils.sh"
+
+LOGPREFIX="/tmp/kernmake"
 
 if confirm "Do you wish to run 'make clean'?";then
 	make clean
 fi
-make -j"$(nproc)" 1>/dev/null
-# Options needed or else the initramfs becomes too big and OS booting fails
 
-if confirm "Do you wish to install the new kernel?";then
-	su -c 'make INSTALL_MOD_STRIP=1 modules_install && make install'
+make menuconfig
+
+# TODO: Fix the issue for which I have to rerun make menuconfig everytime
+# before I can start building the kernel
+# make -j"$(nproc)" 1>/dev/null 2>"${LOGPREFIX}-$(get_date)"
+make -j"$(nproc)" 1>"${LOGPREFIX}-$(get_date).out" 2>"${LOGPREFIX}-$(get_date).err"
+
+# TODO: Add functionality for installing only the modules and ask whether we 
+# want stripped or non-stripped modules, 
+# Options needed or else the initramfs becomes too big and OS booting fails
+if ! confirm "Do you wish to install the modules or kernel?";then
+  exit 0
 fi
-# Separate commands require double password input if the first takes too long
+
+# TODO: Consider replace this section with a case and give the user options
+# to select which install mode does he want.
+if confirm "Do you wish to install the unstripped modules?";then
+	su -c 'make modules_install'
+  exit 0
+elif confirm "Do you wish to install the stripped modules?";then
+	su -c 'make INSTALL_MOD_STRIP=1 modules_install'
+elif confirm "Do you wish to install the new kernel and stripped modules?";then
+	su -c 'make INSTALL_MOD_STRIP=1 modules_install && make install'
+elif confirm "Do you wish to install the new kernel with unstripped modules?";then
+	su -c 'make modules_install && make install'
+fi
 # sudo make INSTALL_MOD_STRIP=1 modules_install
 # sudo make install

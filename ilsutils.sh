@@ -11,3 +11,7 @@ confirm(){
 	fi
 	return 0 
 }
+
+get_date(){
+	date +"%F_%H-%M"
+}
