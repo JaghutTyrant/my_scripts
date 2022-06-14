@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+set -x
+
+source "${HOME}/bin/ilsutils.sh"
+
 VIMDIR="${HOME}/apps/vim/"
 
 install_featuredeps(){
@@ -19,6 +24,7 @@ install_featuredeps(){
 }
 
 build_vim(){
+  estatus=1
 	pushd "${VIMDIR}"
 	make clean all
 	pushd "$VIMDIR"/src
@@ -26,11 +32,31 @@ build_vim(){
 	make  -j"$(nproc)" reconfig 1>/dev/null
 	# make -j$(nproc) 1>/dev/null
 	# make -j$(nproc) test
-	make  test
+  make  test || echo "[ERROR] One or more Tests Failed" && estatus=0
 	# sudo make install
 	popd
 	popd
+  return $estatus
 }
 
-install_featuredeps
-# build_vim
+main(){
+  bldsuccess=false
+  msg="Do you wish to install try to install the required packages to compile?" 
+  if confirm "$msg"; then
+    install_featuredeps
+  fi
+  # Careful here was treating confirm and build_vim as if they were inside
+  # a test command and was using "-a" to control the logic, obviously wrong ...
+  msg="Proceed with VIM compilation?" 
+  if confirm "$msg" && build_vim; then
+    echo HI
+    bldsuccess=true
+  fi
+  msg="Install VIM?" 
+  if "$bldsuccess" && confirm "$msg"; then
+    sudo make install
+  fi
+
+}
+
+main
